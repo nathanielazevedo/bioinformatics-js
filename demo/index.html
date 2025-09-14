@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioInfoViz Demo</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script crossorigin src="https://unpkg.com/d3@7/dist/d3.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .demo-container { max-width: 1200px; margin: 0 auto; }
+        .section { margin-bottom: 40px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+        
+        // Simple DNA Sequence Viewer Component for demo
+        function SimpleDNAViewer({ sequence = "ATGCGATCGTAGCTAGCATGC" }) {
+            const svgRef = useRef();
+            
+            const baseColors = {
+                'A': '#FF6B6B',
+                'T': '#4ECDC4', 
+                'G': '#45B7D1',
+                'C': '#FFA726'
+            };
+            
+            useEffect(() => {
+                if (!svgRef.current) return;
+                
+                const svg = d3.select(svgRef.current);
+                svg.selectAll("*").remove();
+                
+                const bases = sequence.toUpperCase().split('');
+                const baseSize = 30;
+                
+                svg.attr('width', bases.length * baseSize + 40)
+                   .attr('height', 60);
+                
+                const g = svg.append('g').attr('transform', 'translate(20, 20)');
+                
+                bases.forEach((base, i) => {
+                    const baseGroup = g.append('g')
+                        .attr('transform', `translate(${i * baseSize}, 0)`);
+                    
+                    baseGroup.append('rect')
+                        .attr('width', baseSize - 2)
+                        .attr('height', baseSize - 2)
+                        .attr('rx', 3)
+                        .style('fill', baseColors[base] || '#gray')
+                        .style('opacity', 0.8);
+                    
+                    baseGroup.append('text')
+                        .attr('x', baseSize / 2)
+                        .attr('y', baseSize / 2 + 5)
+                        .attr('text-anchor', 'middle')
+                        .style('font-size', '14px')
+                        .style('font-weight', 'bold')
+                        .style('fill', 'white')
+                        .text(base);
+                });
+                
+            }, [sequence]);
+            
+            return (
+                <div>
+                    <h3>DNA Sequence: {sequence}</h3>
+                    <svg ref={svgRef}></svg>
+                </div>
+            );
+        }
+        
+        function App() {
+            const [customSequence, setCustomSequence] = useState("ATGCGATCGTAGCTAGCATGC");
+            
+            const sampleSequences = [
+                "ATGCGATCGTAGCTAGCATGC",
+                "GGCCTTAAGGATCCGGAATTC",
+                "AAAAATTTTTGGGGCCCCCC",
+                "TACGTAGCATGCTAGCGTAC"
+            ];
+            
+            return (
+                <div className="demo-container">
+                    <h1>BioInfoViz Demo</h1>
+                    <p>This demo shows the DNA sequence visualization components.</p>
+                    
+                    <div className="section">
+                        <h2>Sample DNA Sequences</h2>
+                        {sampleSequences.map((seq, index) => (
+                            <div key={index} style={{ marginBottom: '20px' }}>
+                                <SimpleDNAViewer sequence={seq} />
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <div className="section">
+                        <h2>Custom Sequence Input</h2>
+                        <div style={{ marginBottom: '20px' }}>
+                            <label>
+                                Enter DNA sequence (A, T, G, C only):
+                                <br />
+                                <input 
+                                    type="text"
+                                    value={customSequence}
+                                    onChange={(e) => {
+                                        const clean = e.target.value.toUpperCase().replace(/[^ATGC]/g, '');
+                                        setCustomSequence(clean);
+                                    }}
+                                    style={{ 
+                                        width: '400px', 
+                                        padding: '8px', 
+                                        marginTop: '8px',
+                                        fontSize: '16px',
+                                        fontFamily: 'monospace'
+                                    }}
+                                    placeholder="ATGCGATCGTAGC..."
+                                />
+                            </label>
+                        </div>
+                        {customSequence && <SimpleDNAViewer sequence={customSequence} />}
+                    </div>
+                    
+                    <div className="section">
+                        <h2>Color Legend</h2>
+                        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '20px', height: '20px', backgroundColor: '#FF6B6B', borderRadius: '3px' }}></div>
+                                <span>Adenine (A)</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '20px', height: '20px', backgroundColor: '#4ECDC4', borderRadius: '3px' }}></div>
+                                <span>Thymine (T)</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '20px', height: '20px', backgroundColor: '#45B7D1', borderRadius: '3px' }}></div>
+                                <span>Guanine (G)</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '20px', height: '20px', backgroundColor: '#FFA726', borderRadius: '3px' }}></div>
+                                <span>Cytosine (C)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

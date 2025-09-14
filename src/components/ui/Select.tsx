@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 interface SelectProps {
   value?: string;
-  onValueChange?: (value: string) => void;
+  onValueChange?: (value: any) => void;
   children: React.ReactNode;
 }
 

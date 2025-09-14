@@ -276,7 +276,7 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
             .attr('width', baseSize - 2)
             .attr('height', baseSize - 2)
             .attr('rx', 3)
-            .style('fill', isMatch ? '#FFEB3B' : baseColors[d.toUpperCase()] || '#gray')
+            .style('fill', isMatch ? '#FFEB3B' : baseColors[d.toUpperCase() as keyof typeof baseColors] || '#gray')
             .style('opacity', isMatch ? 0.8 : 0.7)
             .style('stroke', isMatch ? '#F57F17' : 'none')
             .style('stroke-width', 2);
