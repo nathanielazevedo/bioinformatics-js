@@ -5,14 +5,22 @@
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
+    "build": "rollup -c && tsc --emitDeclarationOnly",
+    "dev": "rollup -c --watch",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "bioinformatics",
@@ -46,6 +54,10 @@
     "@types/d3": "^7.4.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "typescript": "^5.1.0"
+    "typescript": "^5.1.0",
+    "rollup": "^3.29.0",
+    "@rollup/plugin-typescript": "^11.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.0",
+    "rollup-plugin-peer-deps-external": "^2.2.4"
   }
 }
