@@ -53,6 +53,9 @@ pids
 # Optional eslint cache
 .eslintcache
 
+# GitHub Actions
+.github/workflows/cache/
+
 # Package lock files (choose one)
 package-lock.json
 # yarn.lock
