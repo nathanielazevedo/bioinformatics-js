@@ -1,4 +1,4 @@
-import { DNASequenceViewer } from './src/components/DNASequenceViewer';
+import { DNASequenceViewer } from "./components/DNASequenceViewer";
 
 export default function App() {
   return (

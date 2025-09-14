@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Textarea } from './ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Badge } from './ui/badge';
-import { Trash2, Edit, Plus } from 'lucide-react';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Label } from './ui/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
+import { Textarea } from './ui/Textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/Dialog';
+import { Badge } from './ui/Badge';
+import { Trash2, Edit, Plus } from './ui/icons';
 
 export interface Annotation {
   id: string;
@@ -224,7 +224,7 @@ export const AnnotationManager: React.FC<AnnotationManagerProps> = ({
       {/* Annotation List */}
       <div className="space-y-2 max-h-60 overflow-y-auto">
         {annotations.map((annotation) => (
-          <div key={annotation.id} className="flex items-center justify-between p-2 border rounded">
+          <div key={annotation.id} className="flex items-center justify-between p-2 border border-border rounded">
             <div className="flex items-center gap-2 flex-1">
               <div
                 className="w-3 h-3 rounded"

@@ -57,7 +57,7 @@ pids
 .github/workflows/cache/
 
 # Package lock files (choose one)
-package-lock.json
+# package-lock.json
 # yarn.lock
 
 # Temporary folders

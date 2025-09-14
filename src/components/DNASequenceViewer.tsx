@@ -1,20 +1,30 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Badge } from './ui/badge';
-import { Slider } from './ui/slider';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
+import { Badge } from './ui/Badge';
+import { Slider } from './ui/Slider';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/Tabs';
 import { AnnotationManager, Annotation } from './AnnotationManager';
 
 interface DNASequenceViewerProps {
   initialSequence?: string;
+  annotations?: Annotation[];
+  onAnnotationsChange?: (annotations: Annotation[]) => void;
+  width?: number;
+  height?: number;
+  className?: string;
 }
 
 export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({ 
-  initialSequence = "ATGCGATCGTAGCTAGCATGCTAGCTAGCATGCTAGCTAGCATGCTAGCATGCTAGCTAGCATGCTAGCTAGCATGC" 
+  initialSequence = "ATGCGATCGTAGCTAGCATGCTAGCTAGCATGCTAGCTAGCATGCTAGCATGCTAGCTAGCATGCTAGCTAGCATGC",
+  annotations: externalAnnotations,
+  onAnnotationsChange,
+  width = 800,
+  height,
+  className = ''
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [sequence, setSequence] = useState(initialSequence);
@@ -22,7 +32,11 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
   const [currentPosition, setCurrentPosition] = useState(0);
   const [basesPerRow, setBasesPerRow] = useState(20);
   const [scale, setScale] = useState(1);
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [internalAnnotations, setInternalAnnotations] = useState<Annotation[]>([]);
+  
+  // Use external annotations if provided, otherwise use internal state
+  const annotations = externalAnnotations || internalAnnotations;
+  const setAnnotations = onAnnotationsChange || setInternalAnnotations;
   
   // Color mapping for DNA bases
   const baseColors = {
@@ -109,17 +123,17 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
       ...annotation,
       id: `annotation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     };
-    setAnnotations(prev => [...prev, newAnnotation]);
+    setAnnotations([...annotations, newAnnotation]);
   };
 
   const handleEditAnnotation = (id: string, updatedAnnotation: Omit<Annotation, 'id'>) => {
-    setAnnotations(prev => prev.map(ann => 
+    setAnnotations(annotations.map(ann => 
       ann.id === id ? { ...updatedAnnotation, id } : ann
     ));
   };
 
   const handleDeleteAnnotation = (id: string) => {
-    setAnnotations(prev => prev.filter(ann => ann.id !== id));
+    setAnnotations(annotations.filter(ann => ann.id !== id));
   };
 
   // Get annotations visible in current view
@@ -137,7 +151,7 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = 800;
+    const svgWidth = width;
     const baseSize = 24 * scale;
     const rowHeight = 30 * scale;
     const annotationHeight = 20 * scale;
@@ -146,8 +160,8 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
     const visibleSequence = sequence.slice(startPosition, endPosition);
     const visibleAnnotations = getVisibleAnnotations(startPosition, endPosition);
     
-    const height = Math.ceil(visibleSequence.length / basesPerRow) * (rowHeight + annotationHeight) + 60;
-    svg.attr('width', width).attr('height', height);
+    const svgHeight = height || Math.ceil(visibleSequence.length / basesPerRow) * (rowHeight + annotationHeight) + 60;
+    svg.attr('width', svgWidth).attr('height', svgHeight);
 
     const g = svg.append('g').attr('transform', 'translate(20, 30)');
 
@@ -167,7 +181,7 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
       .append('text')
       .attr('class', 'position-label')
       .attr('x', -10)
-      .attr('y', (d, i) => i * rowHeight + 15)
+      .attr('y', (d, i) => i * (rowHeight + annotationHeight) + 15)
       .attr('text-anchor', 'end')
       .style('font-size', `${10 * scale}px`)
       .style('fill', '#666')
@@ -192,14 +206,14 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
           const annEnd = Math.min(annotation.end, row.startIndex + row.bases.length - 1);
           const relativeStart = annStart - row.startIndex;
           const relativeEnd = annEnd - row.startIndex;
-          const width = (relativeEnd - relativeStart + 1) * baseSize;
+          const annotationWidth = (relativeEnd - relativeStart + 1) * baseSize;
 
           const annGroup = annotationGroup.append('g')
             .attr('transform', `translate(${relativeStart * baseSize}, ${annIndex * 12})`);
 
           // Annotation background
           annGroup.append('rect')
-            .attr('width', width)
+            .attr('width', annotationWidth)
             .attr('height', 10)
             .attr('rx', 2)
             .style('fill', annotation.color)
@@ -208,9 +222,9 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
             .style('stroke-width', 1);
 
           // Annotation label (only if it fits)
-          if (width > 40) {
+          if (annotationWidth > 40) {
             annGroup.append('text')
-              .attr('x', width / 2)
+              .attr('x', annotationWidth / 2)
               .attr('y', 7)
               .attr('text-anchor', 'middle')
               .style('font-size', `${8 * scale}px`)
@@ -227,7 +241,7 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
               .style('opacity', 0.8);
           } else {
             annGroup.append('polygon')
-              .attr('points', `${width},0 ${width-5},5 ${width},10`)
+              .attr('points', `${annotationWidth},0 ${annotationWidth-5},5 ${annotationWidth},10`)
               .style('fill', 'white')
               .style('opacity', 0.8);
           }
@@ -294,7 +308,7 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
         });
     });
 
-  }, [sequence, currentPosition, basesPerRow, scale, searchTerm, matches, annotations]);
+  }, [sequence, currentPosition, basesPerRow, scale, searchTerm, matches, annotations, width, height]);
 
   const sampleSequences = {
     'Sample 1': "ATGCGATCGTAGCTAGCATGCTAGCTAGCATGCTAGCTAGCATGCTAGCATGCTAGCTAGCATGCTAGCTAGCATGC",
@@ -303,7 +317,7 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
   };
 
   return (
-    <div className="w-full p-4 space-y-4">
+    <div className={`w-full p-4 space-y-4 ${className}`}>
       <Card>
         <CardHeader>
           <CardTitle>DNA Sequence Viewer</CardTitle>
@@ -315,117 +329,117 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
               <TabsTrigger value="annotations">Annotations</TabsTrigger>
             </TabsList>
             <TabsContent value="sequence" className="space-y-4">
-          {/* Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block mb-2">Sample Sequences</label>
-              <Select onValueChange={(value) => setSequence(sampleSequences[value as keyof typeof sampleSequences])}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select sample" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(sampleSequences).map(key => (
-                    <SelectItem key={key} value={key}>{key}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="block mb-2">Bases per row</label>
-              <Select value={basesPerRow.toString()} onValueChange={(value) => setBasesPerRow(parseInt(value))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="30">30</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block mb-2">Sample Sequences</label>
+                  <Select onValueChange={(value) => setSequence(sampleSequences[value as keyof typeof sampleSequences])}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select sample" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(sampleSequences).map(key => (
+                        <SelectItem key={key} value={key}>{key}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="block mb-2">Bases per row</label>
+                  <Select value={basesPerRow.toString()} onValueChange={(value) => setBasesPerRow(parseInt(value))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="30">30</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div>
-              <label className="block mb-2">Scale: {scale.toFixed(1)}x</label>
-              <Slider
-                value={[scale]}
-                onValueChange={(value) => setScale(value[0])}
-                min={0.5}
-                max={2}
-                step={0.1}
-                className="w-full"
-              />
-            </div>
+                <div>
+                  <label className="block mb-2">Scale: {scale.toFixed(1)}x</label>
+                  <Slider
+                    value={[scale]}
+                    onValueChange={(value) => setScale(value[0])}
+                    min={0.5}
+                    max={2}
+                    step={0.1}
+                    className="w-full"
+                  />
+                </div>
 
-            <div>
-              <label className="block mb-2">Search</label>
-              <Input
-                placeholder="Search sequence..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
+                <div>
+                  <label className="block mb-2">Search</label>
+                  <Input
+                    placeholder="Search sequence..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
 
-          {/* Navigation */}
-          <div className="flex items-center gap-4">
-            <Button 
-              onClick={() => setCurrentPosition(Math.max(0, currentPosition - basesPerRow * 5))}
-              disabled={currentPosition === 0}
-            >
-              Previous
-            </Button>
-            <span className="text-sm">
-              Position: {currentPosition + 1} - {Math.min(currentPosition + basesPerRow * 15, sequence.length)} of {sequence.length}
-            </span>
-            <Button 
-              onClick={() => setCurrentPosition(Math.min(sequence.length - 1, currentPosition + basesPerRow * 5))}
-              disabled={currentPosition + basesPerRow * 15 >= sequence.length}
-            >
-              Next
-            </Button>
-          </div>
+              {/* Navigation */}
+              <div className="flex items-center gap-4">
+                <Button 
+                  onClick={() => setCurrentPosition(Math.max(0, currentPosition - basesPerRow * 5))}
+                  disabled={currentPosition === 0}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm">
+                  Position: {currentPosition + 1} - {Math.min(currentPosition + basesPerRow * 15, sequence.length)} of {sequence.length}
+                </span>
+                <Button 
+                  onClick={() => setCurrentPosition(Math.min(sequence.length - 1, currentPosition + basesPerRow * 5))}
+                  disabled={currentPosition + basesPerRow * 15 >= sequence.length}
+                >
+                  Next
+                </Button>
+              </div>
 
-          {/* Search results */}
-          {searchTerm && (
-            <div className="text-sm">
-              Found {matches.length} matches for "{searchTerm}"
-              {matches.length > 0 && (
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {matches.slice(0, 10).map((position, index) => (
-                    <Button
-                      key={position}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPosition(Math.max(0, position - basesPerRow))}
-                    >
-                      {position + 1}
-                    </Button>
-                  ))}
-                  {matches.length > 10 && <span>... and {matches.length - 10} more</span>}
+              {/* Search results */}
+              {searchTerm && (
+                <div className="text-sm">
+                  Found {matches.length} matches for "{searchTerm}"
+                  {matches.length > 0 && (
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      {matches.slice(0, 10).map((position, index) => (
+                        <Button
+                          key={position}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPosition(Math.max(0, position - basesPerRow))}
+                        >
+                          {position + 1}
+                        </Button>
+                      ))}
+                      {matches.length > 10 && <span>... and {matches.length - 10} more</span>}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Statistics */}
-          <div className="flex gap-4 flex-wrap">
-            <Badge variant="outline">Length: {stats.total}</Badge>
-            <Badge variant="outline" style={{ backgroundColor: baseColors.A, color: 'white' }}>
-              A: {stats.counts.A || 0} ({((stats.counts.A || 0) / stats.total * 100).toFixed(1)}%)
-            </Badge>
-            <Badge variant="outline" style={{ backgroundColor: baseColors.T, color: 'white' }}>
-              T: {stats.counts.T || 0} ({((stats.counts.T || 0) / stats.total * 100).toFixed(1)}%)
-            </Badge>
-            <Badge variant="outline" style={{ backgroundColor: baseColors.G, color: 'white' }}>
-              G: {stats.counts.G || 0} ({((stats.counts.G || 0) / stats.total * 100).toFixed(1)}%)
-            </Badge>
-            <Badge variant="outline" style={{ backgroundColor: baseColors.C, color: 'white' }}>
-              C: {stats.counts.C || 0} ({((stats.counts.C || 0) / stats.total * 100).toFixed(1)}%)
-            </Badge>
-            <Badge variant="outline">GC Content: {stats.gcContent.toFixed(1)}%</Badge>
-          </div>
+              {/* Statistics */}
+              <div className="flex gap-4 flex-wrap">
+                <Badge variant="outline">Length: {stats.total}</Badge>
+                <Badge variant="outline" style={{ backgroundColor: baseColors.A, color: 'white' }}>
+                  A: {stats.counts.A || 0} ({((stats.counts.A || 0) / stats.total * 100).toFixed(1)}%)
+                </Badge>
+                <Badge variant="outline" style={{ backgroundColor: baseColors.T, color: 'white' }}>
+                  T: {stats.counts.T || 0} ({((stats.counts.T || 0) / stats.total * 100).toFixed(1)}%)
+                </Badge>
+                <Badge variant="outline" style={{ backgroundColor: baseColors.G, color: 'white' }}>
+                  G: {stats.counts.G || 0} ({((stats.counts.G || 0) / stats.total * 100).toFixed(1)}%)
+                </Badge>
+                <Badge variant="outline" style={{ backgroundColor: baseColors.C, color: 'white' }}>
+                  C: {stats.counts.C || 0} ({((stats.counts.C || 0) / stats.total * 100).toFixed(1)}%)
+                </Badge>
+                <Badge variant="outline">GC Content: {stats.gcContent.toFixed(1)}%</Badge>
+              </div>
 
               {/* Custom sequence input */}
               <div>
@@ -477,7 +491,7 @@ export const DNASequenceViewer: React.FC<DNASequenceViewerProps> = ({
       {/* Visualization */}
       <Card>
         <CardContent className="p-4">
-          <div className="overflow-auto border rounded">
+          <div className="overflow-auto border border-border rounded">
             <svg ref={svgRef}></svg>
           </div>
         </CardContent>
