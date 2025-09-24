@@ -1,62 +1,55 @@
-name: Publish bioinformatics-js to NPM
+name: Publish to NPM
 
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to publish (leave empty to use package.json version)'
-        required: false
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
 
 jobs:
-  publish:
+  build-and-test:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build package
+      run: npm run build
+    
+    - name: Test build output
+      run: ls -la dist/
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-
-      - name: Lint code
-        run: npm run lint || echo "Lint script not found, skipping..."
-
-      - name: Run tests
-        run: npm test || echo "Test script not found, skipping..."
-
-      - name: Build package
-        run: npm run build || echo "Build script not found, skipping..."
-
-      - name: Verify package contents
-        run: npm pack --dry-run
-
-      - name: Check if version already published
-        run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          if npm view bioinformatics-js@$PACKAGE_VERSION version 2>/dev/null; then
-            echo "Version $PACKAGE_VERSION already exists on npm"
-            exit 1
-          fi
-
-      - name: Publish to NPM
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub release summary
-        run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          echo "✅ Successfully published bioinformatics-js@$PACKAGE_VERSION to npm" >> $GITHUB_STEP_SUMMARY
-          echo "📦 Install with: \`npm install bioinformatics-js\`" >> $GITHUB_STEP_SUMMARY
+  publish:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build package
+      run: npm run build
+    
+    - name: Publish to NPM
+      run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
